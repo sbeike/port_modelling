@@ -76,6 +76,7 @@ while True:
 
     # Draw the marked containers so far
     for corners in container_corners:
+        print(container_corners)
         # Draw a rectangle using the two diagonal corners
         cv2.rectangle(marked_img, corners[0], corners[1], (0, 255, 0), 2)
 
