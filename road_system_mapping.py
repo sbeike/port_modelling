@@ -91,7 +91,7 @@ class ContainerMapping:
     def compute_feasible_arcs(self):
         for i, node1 in enumerate(self.nodes):
             for j, node2 in enumerate(self.nodes):
-                if i != j and i < j and self.calculate_distance(node1, node2) < 300:
+                if i != j and self.calculate_distance(node1, node2) < 300:
                     if self.is_feasible_arc(node1, node2):
                         direction = self.direction_edge(node1, node2)
                         if i not in self.feasible_arcs:
