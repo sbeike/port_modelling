@@ -5,9 +5,19 @@ import matplotlib.pyplot as plt
 
 import cv2
 
+Length_standard_container = 12.19
+
 # Initialize variables to store container corners
 container_corners = []
 current_container = []
+
+container_length_pixels = 0
+reference_container_list = []
+
+def calculate_distance(point1, point2):
+    # Use Euclidean distance formula to calculate the distance between two points
+    distance = np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
+    return distance
 
 # Mouse callback function to mark corners of container piles
 def mark_container(event, x, y, flags, param):
@@ -20,11 +30,40 @@ def mark_container(event, x, y, flags, param):
             # When two points are marked, save the container
             container_corners.append(tuple(current_container))
             current_container = []  # Reset for next container
+            
+    
+def reference_container(event, x, y, flags, param):
+    global container_length_pixels
+    
+    # When left mouse button is clicked, mark a corner
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print(f"Reference point: ({x}, {y})")
+        reference_container_list.append((x, y))
+        if len(reference_container_list) == 2:
+            container_length_pixels = calculate_distance(reference_container_list[0], reference_container_list[1])
 
 # Load the image
 image_path = './data/port_close_image.png'  # Replace with the correct path
 img = cv2.imread(image_path)
 marked_img = img.copy()
+
+# Create a window and set the mouse callback function
+cv2.namedWindow('Reference Container')
+cv2.setMouseCallback('Reference Container', reference_container)
+
+# Loop to display the image and allow marking
+while True:
+    # Display the image
+    cv2.imshow('Reference Container', marked_img)
+
+    
+    # Wait for 'q' to quit
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# When finished, close the window
+cv2.destroyAllWindows()
+
 
 # Create a window and set the mouse callback function
 cv2.namedWindow('Mark Containers')
@@ -97,10 +136,7 @@ print("Node coordinates:", nodes)
 
 
 
-def calculate_distance(point1, point2):
-    # Use Euclidean distance formula to calculate the distance between two points
-    distance = np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
-    return distance
+
 
 
 
@@ -215,6 +251,7 @@ print(f"Direction: {direction}")
 
 # Find feasible arcs between adjacent nodes
 feasible_arcs = {}
+
 for i, node1 in enumerate(nodes):
     for j, node2 in enumerate(nodes):
         if i != j and i < j:
@@ -242,6 +279,47 @@ for node, directions in feasible_arcs.items():
     for direction, arc in directions.items():
         cv2.line(node_image, arc[0], arc[1], (0, 0, 255), 2)
 
+neighbor_nodes = {}
+        
+for node, direction in feasible_arcs.items():
+    for dir, arc in direction.items():
+        if node not in neighbor_nodes:
+            neighbor_nodes[node] = [nodes.index(arc[1])]
+        else:
+            neighbor_nodes[node].append(nodes.index(arc[1]))
+
+
+print("Neighbor nodes:", neighbor_nodes)
+
+#Save neighbor nodes and nodes as csv files
+import csv
+
+#Set first node to coordinates 0,0 and rest to relative to first node
+first_node = nodes[0]
+nodes = [(node[0] - first_node[0], node[1] - first_node[1]) for node in nodes]
+
+
+length_one_pixel_meter = Length_standard_container / container_length_pixels
+
+#Scale alle nodes to meters
+nodes = [(node[0] * length_one_pixel_meter, node[1] * length_one_pixel_meter) for node in nodes]
+
+
+# Save the nodes to a CSV file
+with open('data/nodes.csv', mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Node ID', 'X', 'Y'])
+    for i, node in enumerate(nodes):
+        writer.writerow([i, node[0], node[1]])
+    
+    
+# Save the neighbor nodes to a CSV file
+with open('data/neighbor_nodes.csv', mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Node ID', 'Neighbor IDs'])
+    for node, neighbors in neighbor_nodes.items():
+        writer.writerow([node, neighbors])
+        
 
 # Show the image with feasible arcs
 cv2.imshow("Feasible Arcs", node_image)
